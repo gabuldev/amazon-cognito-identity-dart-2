@@ -1061,7 +1061,7 @@ class CognitoUser {
   }
 
   /// This is used by authenticated users to change a list of attributes
-  void updateAttributes(List<CognitoUserAttribute> attributes) async {
+  Future updateAttributes(List<CognitoUserAttribute> attributes) async {
     if (_signInUserSession == null || !_signInUserSession.isValid()) {
       throw Exception('User is not authenticated');
     }
