@@ -26,7 +26,7 @@ class Client {
   }
 
   /// Makes requests on AWS API service provider
-  dynamic request(String operation, Map<String, dynamic> params,
+  Future<Map> request(String operation, Map<String, dynamic> params,
       {String endpoint, String service}) async {
     final endpointReq = endpoint ?? this.endpoint;
     final targetService = service ?? _service;
@@ -55,7 +55,7 @@ class Client {
       throw CognitoClientException('Unknown Error', code: 'Unknown error');
     }
 
-    var data;
+    Map data;
 
     try {
       data = json.decode(utf8.decode(response.bodyBytes));

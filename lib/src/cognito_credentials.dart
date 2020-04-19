@@ -27,58 +27,42 @@ class CognitoCredentials {
         _client = _pool.client;
 
   /// Get AWS Credentials for authenticated user
-  Future<void> getAwsCredentials(token, [String authenticator]) async {
+  Future<bool> getAwsCredentials(token, [String authenticator]) async {
     if (!(expireTime == null ||
         DateTime.now().millisecondsSinceEpoch > expireTime - 60000)) {
-      return;
+      return false;
     }
 
     final identityId = CognitoIdentityId(_identityPoolId, _pool,
         token: token, authenticator: authenticator);
-    await _getAwsCredentials(identityId);
+    return await _getAwsCredentials(identityId);
   }
 
-  Future<void> getGuestAwsCredentialsId() async {
+  Future<bool> getGuestAwsCredentialsId() async {
     if (!(expireTime == null ||
         DateTime.now().millisecondsSinceEpoch > expireTime - 60000)) {
-      return;
+      return false;
     }
 
     final identityId = CognitoIdentityId(_identityPoolId, _pool);
     return _getAwsCredentials(identityId);
   }
 
-  Future<void> _getAwsCredentials(CognitoIdentityId identityId) async {
+  Future<bool> _getAwsCredentials(CognitoIdentityId identityId) async {
     userIdentityId = await identityId.getIdentityId();
 
-    var paramsReq = <String, dynamic>{'IdentityId': userIdentityId};
+    final paramsReq = <String, dynamic>{'IdentityId': userIdentityId};
     if (identityId.loginParam != null) {
       paramsReq['Logins'] = identityId.loginParam;
     }
-
-    var data;
-    try {
-      data = await _client.request('GetCredentialsForIdentity', paramsReq,
-          service: 'AWSCognitoIdentityService',
-          endpoint: 'https://cognito-identity.$_region.amazonaws.com/');
-    } on CognitoClientException catch (e) {
-      // remove cached Identity Id and try again
-      await identityId.removeIdentityId();
-      if (e.code == 'NotAuthorizedException' && _retryCount < 1) {
-        _retryCount++;
-        return await _getAwsCredentials(identityId);
-      }
-
-      _retryCount = 0;
-      rethrow;
-    }
-
-    _retryCount = 0;
-
+    final data = await _client.request('GetCredentialsForIdentity', paramsReq,
+        service: 'AWSCognitoIdentityService',
+        endpoint: 'https://cognito-identity.$_region.amazonaws.com/');
     accessKeyId = data['Credentials']['AccessKeyId'];
     secretAccessKey = data['Credentials']['SecretKey'];
     sessionToken = data['Credentials']['SessionToken'];
     expireTime = (data['Credentials']['Expiration']).toInt() * 1000;
+    return true;
   }
 
   /// Reset AWS Credentials; removes Identity Id from local storage
